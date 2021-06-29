@@ -26,6 +26,7 @@
 
 #include "bitmap_image.hpp"
 #define pi (2*acos(0.0))
+#define EPSILON 0.0000001
 
 
 using namespace std;
@@ -411,6 +412,9 @@ public:
         // set other parameters
         
         a = 0.4;
+        d = 0.2;
+        s = 0.2;
+        shine = 5;
         
     }
     
@@ -488,13 +492,13 @@ public:
                 /// check touch :(
         
                 Ray indt(lights[i]->light_pos,light_direction*-1);
-                Vector light_ref = n*(2.0*indt.direction.dot(n)) - indt.direction ;
+                Vector light_ref = n * (2.0*indt.direction.dot(n)) - indt.direction ;
                 light_ref.normalize();
                 double lambert = l_r.direction.dot(n);
-                double phong = pow((r->direction*-1).dot(light_ref),5);
+                double phong = pow((r->direction*-1).dot(light_ref),shine);
                 lambert = max(lambert,0.0);
                 phong = max(phong,0.0);
-                *out_color = *out_color + (lambert*0.1 + phong*0.1);
+                *out_color = *out_color + (lambert*d + phong*s);
                 
             }
             
@@ -610,11 +614,7 @@ public:
                Vector s_l = getVector(s_p,lights[i]->light_pos);
                s_l.normalize() ;
                Ray *l_r = new Ray(s_p,s_l) ;
-            
-//             int touch = 0 ;
-//             double distance = s_p.distance(lights[i]->light_pos);
-/// touch check
-                   
+              
                Ray indt(lights[i]->light_pos,l_dir*-1);
                Vector light_ref = n*(2.0*indt.direction.dot(n)) - indt.direction ;
                light_ref.normalize();
@@ -625,9 +625,6 @@ public:
 
                *out_color = *out_color + (lambert*d + phong*s);
             
-            
-           
-            
             }
         
         return  t;
@@ -636,27 +633,109 @@ public:
 
 class Triangle:public Object{
 public:
-    Point a,b,c ;
+    Point A,B,C ;
 
     Triangle(Point x,Point y,Point z){
-           this->a = x ;
-           this->b = y ;
-           this->c = z ;
+           this->A = x ;
+           this->B = y ;
+           this->C = z ;
     }
     
     void draw(){
         glColor3f(color.r,color.g,color.b);
         glBegin(GL_TRIANGLES);
-        glVertex3d(a.x,a.y,a.z);
-        glVertex3d(b.x,b.y,b.z);
-        glVertex3d(c.x,c.y,c.z);
+        glVertex3d(A.x,A.y,A.z);
+        glVertex3d(B.x,B.y,B.z);
+        glVertex3d(C.x,C.y,C.z);
         glEnd();
     }
     
-    double intersect(Ray *r,Color *color,int level) {
+    
+    Vector getNormal(){
+        Vector n =  getVector(A,B).cross(getVector(A,C));
+        n.normalize() ;
+        return n ;
+    }
+    
+    Vector getCross(Point a,Point b,Point c){
+        Vector v1 = getVector(a,b) ;
+        Vector v2 = getVector(a,c) ;
+
+        Vector r = v1.cross(v2) ;
+
+        return r ;
+    }
+    
+    Vector getNormal(Vector r) {
+
+        Vector n =  getVector(A,B).cross(getVector(A,C));
+        if(n.dot(r)>0) n = n*-1 ;
+        n.normalize() ;
+        return n ;
+        
+    }
+    
+    Vector getReflection(Ray *ray,Vector normal){
+        double t = 2.0*normal.dot(ray->direction);
+        Vector ans = ray->direction - normal * t;
+        ans.normalize();
+        return ans;
+    }
+    
+    double getParametricValue(Ray *ray) {
+        Vector n = getNormal();
+        double d = - ( n.ax * A.x + n.ay * A.y + n.az * A.z ) ;
+        double t = - ((d+n.dot(getVector(Point(0,0,0),ray->start)))/n.dot(ray->direction));
+        Point P = lineParametric(ray->start,ray->direction,t);
+
+        Vector i,j,k ;
+
+        i = getCross(A,B,P) ;
+        j = getCross(B,C,P) ;
+        k = getCross(C,A,P) ;
+
+        if(i.dot(j)>=1 && i.dot(k)>=1) return t ;
+
+        return -1 ;
+    }
+    
+    double intersect(Ray *r,Color *out_color,int level) {
+        
+        double t = getParametricValue(r);
+        
+        if(t<=0) return -1;
+
+        if(level==0) return t;
+        
+        *out_color = (this->color) * a ;
+        
+        Point ip = lineParametric(r->start,r->direction,t) ;
+        Vector n = getNormal(r->direction) ;
+        
+        for(int i=0;i<lights.size();i++){
+
+            Vector l_dir = getVector(ip,lights[i]->light_pos);
+            l_dir.normalize();
+            Point s_p = lineParametric(ip,l_dir,1);
+            Vector s_l = getVector(s_p,lights[i]->light_pos);
+            s_l.normalize() ;
+            Ray *l_r = new Ray(s_p,s_l);
+
+            Ray indt(lights[i]->light_pos,l_dir*-1);
+            Vector light_ref = n * (2.0*indt.direction.dot(n)) - indt.direction ;
+            light_ref.normalize();
+            double lambert = l_r->direction.dot(n);
+            double phong = pow((r->direction*-1).dot(light_ref),10) ;
+            lambert = max(lambert,0.0);
+            phong = max(phong,0.0);
+            *out_color = *out_color + (lambert*d + phong*s) ;
+         
+
+        }
         
         
-        return  -1;
+        
+        return  t;
     }
     
 };

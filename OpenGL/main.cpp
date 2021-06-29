@@ -23,8 +23,8 @@ double angle,canon_rotation_X,canon_rotation_Y_1,canon_rotation_Y_2,canon_rotati
 int items,recursionLevel,height,width;
 
 
-double windowHeight=800;
-double windowWidth=800;
+double windowHeight=500;
+double windowWidth=500;
 double view_angle=110;
 
 class Vector Look, Right, Up;
@@ -448,8 +448,7 @@ int main(int argc, char **argv){
         
     loadData();
     
-    cout << endl << "-------------------------------- End -------------------------------------" << endl;
-
+    
     //////////////////////////////////////////////////////// Scene Builder ////////////////////////////////////////////// / /
     
     
@@ -469,7 +468,8 @@ int main(int argc, char **argv){
     glutMouseFunc(mouseListener);
     glutMainLoop();        //The main loop of OpenGL
     
-    
+    cout << endl << "-------------------------------- End -------------------------------------" << endl;
+
 
     return 0;
 }
