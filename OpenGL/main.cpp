@@ -9,221 +9,53 @@
 #include<stdlib.h>
 #include<math.h>
 #include "1605034_classes.h"
-#define GL_SILENCE_DEPRECATION
 #include <GLUT/glut.h>
 
 #define pi (2*acos(0.0))
 
-double cameraHeight;
+
 double cameraAngle;
+double cameraHeight;
 int drawgrid;
 int drawaxes;
 int red_dot_count;
 double angle,canon_rotation_X,canon_rotation_Y_1,canon_rotation_Y_2,canon_rotation_Z;
+int items,recursionLevel,height,width;
 
 
+double windowHeight=800;
+double windowWidth=800;
+double view_angle=80;
 
 class Vector Look, Right, Up;
 class Point cam_pos;
 
 
+void Capture(); // will define later
+
 void drawAxes()
 {
-
+    
     glColor3f(100.0, 100.0, 100.0);
     glBegin(GL_LINES);{
-        glVertex3f( 1000,0,0);
-        glVertex3f(-1000,0,0);
+        glVertex3f( 100,0,0);
+        glVertex3f(-100,0,0);
 
-        glVertex3f(0,-1000,0);
-        glVertex3f(0, 1000,0);
+        glVertex3f(0,-100,0);
+        glVertex3f(0, 100,0);
 
-        glVertex3f(0,0, 1000);
-        glVertex3f(0,0,-1000);
+        glVertex3f(0,0, 100);
+        glVertex3f(0,0,-100);
     }glEnd();
     
 }
 
 
-void drawGrid()
-{
-    int i;
-    if(drawgrid==1)
-    {
-        glColor3f(0.6, 0.6, 0.6);    //grey
-        glBegin(GL_LINES);{
-            for(i=-8;i<=8;i++){
-
-                if(i==0)
-                    continue;    //SKIP the MAIN axes
-
-                //lines parallel to Y-axis
-                glVertex3f(i*10, -90, 0);
-                glVertex3f(i*10,  90, 0);
-
-                //lines parallel to X-axis
-                glVertex3f(-90, i*10, 0);
-                glVertex3f( 90, i*10, 0);
-            }
-        }glEnd();
-    }
-}
 
 
 
 
-void drawCircle(double radius,int segments)
-{
-    // a comment added
-    int i;
-    struct Point Points[100];
-    glColor3f(0.7,0.7,0.7);
-    //generate Points
-    for(i=0;i<=segments;i++)
-    {
-        Points[i].x=radius*cos(((double)i/(double)segments)*2*pi);
-        Points[i].y=radius*sin(((double)i/(double)segments)*2*pi);
-    }
-    //draw segments using generated Points
-    for(i=0;i<segments;i++)
-    {
-        glBegin(GL_LINES);
-        {
-            glVertex3f(Points[i].x,Points[i].y,0);
-            glVertex3f(Points[i+1].x,Points[i+1].y,0);
-        }
-        glEnd();
-    }
-}
 
-
-
-
-void drawCone(double radius,double height,int segments)
-{
-    int i;
-    double shade;
-    struct Point Points[100];
-    //generate Points
-    for(i=0;i<=segments;i++)
-    {
-        Points[i].x=radius*cos(((double)i/(double)segments)*2*pi);
-        Points[i].y=radius*sin(((double)i/(double)segments)*2*pi);
-    }
-    //draw triangles using generated Points
-    for(i=0;i<segments;i++)
-    {
-        //create shading effect
-        if(i<segments/2)shade=2*(double)i/(double)segments;
-        else shade=2*(1.0-(double)i/(double)segments);
-        glColor3f(shade,shade,shade);
-
-        glBegin(GL_TRIANGLES);
-        {
-            glVertex3f(0,0,height);
-            glVertex3f(Points[i].x,Points[i].y,0);
-            glVertex3f(Points[i+1].x,Points[i+1].y,0);
-        }
-        glEnd();
-    }
-}
-
-
-
-
-void draw_Cylinder(double radius,Point center,double length) {
-    struct Point Points[100];
-    int slices = 35;
-
-
-
-    for(int i=0;i<=slices;i++) {
-
-        Points[i].y=radius*cos(((double)i/(double)slices)*2*pi)+center.y;
-        Points[i].z=radius*sin(((double)i/(double)slices)*2*pi)+center.z;
-        Points[i].x=center.x;
-
-    }
-
-
-    for(int i=0;i<slices;i++) {
-
-
-        if(i%2==0)
-            glColor3f(1,1,1);
-        else
-            glColor3f(0,0,0);
-
-        glBegin(GL_QUADS);
-        {
-            glVertex3f(Points[i].x,Points[i].y,Points[i].z);
-            glVertex3f(Points[i+1].x,Points[i+1].y,Points[i+1].z);
-
-            glVertex3f(Points[i].x+length,Points[i].y,Points[i].z);
-            glVertex3f(Points[i+1].x+length,Points[i+1].y,Points[i+1].z);
-        }
-        glEnd();
-
-
-    }
-
-
-}
-
-void draw_half_sphere(double radius,Point center,bool isLeft) {
-    struct Point Points[100][100];
-    int i,j;
-    double h,r;
-    int stacks = 35;
-    int slices = 35;
-    //generate Points
-    for(i=0;i<=stacks;i++)
-    {
-        h=radius*sin(((double)i/(double)stacks)*(pi/2));
-        r=radius*cos(((double)i/(double)stacks)*(pi/2));
-        for(j=0;j<=slices;j++)
-        {
-            Points[i][j].y=r*cos(((double)j/(double)slices)*2*pi)+center.y;
-            Points[i][j].z=r*sin(((double)j/(double)slices)*2*pi)+center.z;
-            Points[i][j].x=h+center.x;
-        }
-    }
-
-    for(i=0;i<stacks;i++)
-    {
-
-        for(j=0;j<slices;j++)
-        {
-            if(j%2==0)
-                glColor3f(1,1,1);
-            else
-                glColor3f(0,0,0);
-
-            glBegin(GL_QUADS);{
-                //left hemisphere
-                if(!isLeft) {
-                    glVertex3f(Points[i][j].x,Points[i][j].y,Points[i][j].z);
-                    glVertex3f(Points[i][j+1].x,Points[i][j+1].y,Points[i][j+1].z);
-                    glVertex3f(Points[i+1][j+1].x,Points[i+1][j+1].y,Points[i+1][j+1].z);
-                    glVertex3f(Points[i+1][j].x,Points[i+1][j].y,Points[i+1][j].z);
-                }
-                //Right hemisphere
-                else {
-                    glVertex3f(-Points[i][j].x,Points[i][j].y,Points[i][j].z);
-                    glVertex3f(-Points[i][j+1].x,Points[i][j+1].y,Points[i][j+1].z);
-                    glVertex3f(-Points[i+1][j+1].x,Points[i+1][j+1].y,Points[i+1][j+1].z);
-                    glVertex3f(-Points[i+1][j].x,Points[i+1][j].y,Points[i+1][j].z);
-                }
-            }glEnd();
-        }
-    }
-
-}
-
-
-
-
-// L = one    R = two   U = axis
 
 
 
@@ -270,8 +102,8 @@ void keyboardListener(unsigned char key, int x,int y){
         case '6':
             Rotate(Up,Right,Look,-angle*5);
             break;
-        case 'p':
-          
+        case '0':
+            Capture();
             break;
 
      
@@ -342,70 +174,73 @@ void mouseListener(int button, int state, int x, int y){    //x, y is the x-y of
 
 
 
-void draw_front(Point center) {
 
-    double radius = 25;
 
-    struct Point Points[100][100];
-    int i,j;
-    double h,r;
-    int stacks = 35;
-    int slices = 35;
-    //generate Points
-    for(i=0;i<=stacks;i++)
-    {
-        h=radius*sin(((double)i/(double)stacks)*(pi/2));
-        r=radius*cos(((double)i/(double)stacks)*(pi/2));
-        for(j=0;j<=slices;j++)
-        {
-            Points[i][j].y=r*cos(((double)j/(double)slices)*2*pi)+center.y;
-            Points[i][j].z=r*sin(((double)j/(double)slices)*2*pi)+center.z;
-            Points[i][j].x=h+center.x;
+void Capture() {
+    
+    int image_height = (int) height ;
+    int image_width = (int) width ;
+    bitmap_image image(image_height,image_width);
+    
+    double planeDistance = (windowHeight/2.0)*tan( (view_angle*pi)/360.0);
+
+    Vector new_l = Look*planeDistance ;
+    Vector new_r = Right*(-1.0*(windowHeight/2.0)) ;
+    Vector new_u = Up*(windowWidth/2.0) ;
+    
+    Vector resultant = new_l+new_r+new_u ;
+    Point topLeft = lineParametric(cam_pos,resultant,1);
+
+    double du = windowHeight/image_height ;
+    double dv = windowWidth/image_width ;
+    
+    
+    
+    for(int i=0;i<image_height;i++){
+            for(int j=0;j<image_width;j++){
+                Point point;
+                Vector n_u = Up*(-1.0*i*du);
+                Vector n_r = Right*(j*dv);
+                Vector n_resultant = n_u + n_r ;
+                point = lineParametric(topLeft,n_resultant,1);
+                Vector v = getVector(cam_pos,point);
+                v.normalize();
+                Ray *ray = new Ray(cam_pos,v);
+                
+                int nearest = -1;
+                Color *color = new Color();
+                double min_t = INT_MAX;
+
+                // for each object
+
+                for(int k=0;k<objects.size();k++){
+                    double t = objects[k]->intersect(ray,color,0);
+                    if(t>0){
+                        if(t<min_t){
+                            nearest = k;
+                            min_t = t;
+                        }
+                    }
+                }
+                if(nearest == -1)
+                {
+                    continue;
+                }
+                else{
+                    objects[nearest]->intersect(ray,color,1);
+                    image.set_pixel(j,i,color->r*255,color->g*255,color->b*255);
+                }
+            }
         }
-    }
-
-    for(i=0;i<stacks;i++)
-    {
-
-        for(j=0;j<slices;j++)
-        {
-            if(j%2==0)
-                glColor3f(1,1,1);
-            else
-                glColor3f(0,0,0);
-
-            glBegin(GL_QUADS);{
-
-                glVertex3f(Points[i][j].x,Points[i][j].y,Points[i][j].z);
-                glVertex3f(Points[i][j+1].x,Points[i][j+1].y,Points[i][j+1].z);
-                glVertex3f(Points[i+1][j+1].x,Points[i+1][j+1].y,Points[i+1][j+1].z);
-                glVertex3f(Points[i+1][j].x,Points[i+1][j].y,Points[i+1][j].z);
-
-
-            }glEnd();
-        }
-    }
+    
+    
+    
+    image.save_image("output.bmp");
+    printf("Image generated\n");
 }
 
 
 
-
-
-
-void draw_plane(double side, double dist) {
-
-    glColor3f(.5,.5,.5);
-    glBegin(GL_QUADS);{
-
-        glVertex3f(dist,side,side);
-        glVertex3f(dist,-side,side);
-        glVertex3f(dist,-side,-side);
-        glVertex3f(dist,side,-side);
-
-    }glEnd();
-
-
-}
 
 
 
@@ -443,8 +278,13 @@ void display(){
     ****************************/
     //add objects
     
-    CheckerBoard checkerBoard(20,20);
-    checkerBoard.draw();
+    for(int i=0;i<objects.size();i++) {
+        objects[i]->draw();
+    }
+    
+    drawAxes();
+    
+
 
 
  
@@ -496,18 +336,21 @@ void init(){
     //near distance
     //far distance
 
-    cam_pos = Point(500,500,300);
+    cam_pos = Point(120,110,50);
+    
     Look = Vector(-1/sqrt(2),-1/sqrt(2),0);
     Up = Vector(0,0,1);
     Right = Vector(-1/sqrt(2),1/sqrt(2),0);
     
-    //gluLookAt(cam_pos.x,cam_pos.y,cam_pos.z,   0,0,0,    0,1,0);
-
+    cam_pos = cam_pos - Look*5;
 }
 
 void loadData() {
     
-    int items,recursionLevel,height,width;
+    CheckerBoard *checkerBoard = new CheckerBoard(10,40);
+    objects.push_back(checkerBoard);
+    
+    
     string object_type;
     freopen("scene.txt","r",stdin);
     cin>>recursionLevel >> width >> items ;
@@ -518,32 +361,96 @@ void loadData() {
         cin>>object_type;
         
         if(object_type=="sphere") {
-            Object newObj = new Sphere(
+            Point center;
+            cin>>center.x>>center.y>>center.z;
+            double rad;
+            cin>>rad;
+            Sphere *newObj = new Sphere(center,rad);
+            Color col;
+            cin>>col.r>>col.g>>col.b;
+            newObj->setColor(col);
+            cin>>a>>d>>s>>r>>shine;
+            newObj->setCoEfficients(a, d, s, r);
+            newObj->setShine(shine);
+            
+            objects.push_back(newObj);
+       
+            
+            
         }
         
         else if(object_type=="triangle") {
             
+            Point A,B,C;
+            cin>>A.x>>A.y>>A.z;
+            cin>>B.x>>B.y>>B.z;
+            cin>>C.x>>C.y>>C.z;
+            
+            Triangle *newObj = new Triangle(A,B,C);
+            
+            Color col;
+            cin>>col.r>>col.g>>col.b;
+            newObj->setColor(col);
+            cin>>a>>d>>s>>r>>shine;
+            newObj->setCoEfficients(a, d, s, r);
+            newObj->setShine(shine);
+            
+            objects.push_back(newObj);
             
             
         }
         
         else if(object_type=="general") {
+            double A,B,C,D,E,F,G,H,I,J;
+            cin>>A>>B>>C>>D>>E>>F>>G>>H>>I>>J;
             
+            General *newObj = new General(A,B,C,D,E,F,G,H,I,J);
             
+            Point p;
+            cin>>p.x>>p.y>>p.z;
+            newObj->setRefPoint(p);
+            Point temp;
+            cin>>temp.x>>temp.y>>temp.z;
+            newObj->setDimension(temp.x, temp.y, temp.z);
+            Color c;
+            cin>>c.r>>c.g>>c.b;
+            newObj->setColor(c);
+            
+            cin>>a>>d>>s>>r>>shine;
+            newObj->setCoEfficients(a, d, s, r);
+            newObj->setShine(shine);
+            
+            objects.push_back(newObj);
             
         }
         
         else continue;
     }
     
+    cin>>items ;
+    
+    for(int i=0;i<items;i++){
+        Point p;
+        cin>>p.x>>p.y>>p.z;
+        Color c;
+        cin>>c.r>>c.g>>c.b;
+        
+        Light *newLight = new Light(p,c);
+        lights.push_back(newLight);
+    }
+    
+    
 }
 
 int main(int argc, char **argv){
+    
+    cout << endl << "------------------------------- Console ------------------------------------" << endl;
         
     loadData();
     
-    
-    //////////////////////////////////////////////////////// Scene Builder //////////////////////////////////////// / /
+    cout << endl << "-------------------------------- End -------------------------------------" << endl;
+
+    //////////////////////////////////////////////////////// Scene Builder ////////////////////////////////////////////// / /
     
     
     glutInit(&argc,argv);
@@ -561,6 +468,8 @@ int main(int argc, char **argv){
     glutSpecialFunc(specialKeyListener);
     glutMouseFunc(mouseListener);
     glutMainLoop();        //The main loop of OpenGL
+    
+    
 
     return 0;
 }
