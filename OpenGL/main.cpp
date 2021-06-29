@@ -25,7 +25,7 @@ int items,recursionLevel,height,width;
 
 double windowHeight=800;
 double windowWidth=800;
-double view_angle=80;
+double view_angle=110;
 
 class Vector Look, Right, Up;
 class Point cam_pos;
@@ -454,7 +454,7 @@ int main(int argc, char **argv){
     
     
     glutInit(&argc,argv);
-    glutInitWindowSize(1000, 700);
+    glutInitWindowSize(windowWidth, windowHeight);
     glutInitWindowPosition(0, 0);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);    //Depth, Double buffer, RGB color
     glutCreateWindow("Ray Tracing Offline - 1605034");

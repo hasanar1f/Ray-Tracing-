@@ -308,11 +308,15 @@ public:
     virtual double getParametricValue(Ray *r){
         
         return 0;
-    };
+    }
     
     virtual double intersect(Ray *r,Color *color,int level) {
         return -1;
-    } ;
+    }
+    
+    virtual Vector getNormal() {
+        return Vector();
+    }
     
     
     virtual void draw() = 0;
@@ -344,6 +348,9 @@ public:
     Color color;
     double size;
     
+    Square() {
+        
+    }
 
     Square(Point p,Color c,double s) {
         corner = p;
@@ -366,7 +373,7 @@ public:
         }glEnd();
     }
     
-    double intersect(Ray r,Color *color,int level) {
+    double intersect(Ray *r,Color *color,int level) {
         
         
         return  -1.0;
@@ -379,32 +386,129 @@ public:
     int N;
     int size;
     bool toggle;
-    CheckerBoard(int N,int size){
+    bool **board;
+    
+    CheckerBoard(int N,int size) {
+        
         this->N = N;
         this->size = size;
+        
+        board = new bool* [2*N+1];
+        
+        for(int i=0;i<=2*N;i++) {
+            board[i] = new bool();
+        }
+        
+        toggle = true;
+        for(int i=0;i<=2*N;i++){
+            for(int j=0;j<=2*N;j++){
+                
+                board[i][j] = toggle;
+                toggle = !toggle;
+            }
+        }
+        
+        // set other parameters
+        
+        a = 0.4;
+        
     }
+    
+    ~CheckerBoard() {
+        delete [] board;
+    }
+    
     void draw(){
         toggle = true;
             for(double i=-size*N;i<=size*N;i+=size){
                 for(double j=-size*N;j<=size*N;j+=size){
                     
-                    if(toggle)
+                    if(toggle) {
                         Square(Point(i,j,0),Color(0,0,0),size).draw();
-                    else
+                    }
+                    else {
                         Square(Point(i,j,0),Color(1,1,1),size).draw();
+                    }
                     toggle  = !toggle;
                 }
             }
     }
     
-    double intersect(Ray r,Color *color,int level) {
-        
-        // which
-        
-        
-        
-        return  -1;
+    Vector getNormal() {
+        return Vector(0, 0, 1);
     }
+    
+    double getParametricValue(Ray *r) {
+        
+        Vector normal = getNormal();
+
+        double t = normal.dot(getVector(Point(0,0,0),r->start)) * (-1.0);
+        t = t / normal.dot(r->direction);
+
+        return t;
+    }
+    
+    bool checkInside(Point p) {
+        return (p.x >= -N*size) && (p.x <= N*size) && (p.y >= -N*size) && (p.y <= N*size);
+    }
+    
+    double intersect(Ray *r,Color *out_color,int level) {
+        
+        double t = getParametricValue(r);
+        
+        if(t<=0) return  -1;
+        
+       // if(level==0) return -1;
+        
+        
+        
+        Point ip = lineParametric(r->start, r->direction, t); // intersection point
+        Vector n = getNormal();
+
+        // get ii,jj
+        if( checkInside(ip) ) {
+            
+            
+            int ii = (int) floor( (ip.x + N*size) / size );
+            int jj = (int) floor( (ip.y + N*size) / size );
+            
+            // set ambient light
+            if( board[ii][jj] ) *out_color = Color(0,0,0) * a;
+            else *out_color = Color(1,1,1) * a;
+            
+            for (int i=0; i<lights.size(); i++) {
+                Vector light_direction = getVector(ip, lights[i]->light_pos);
+                light_direction.normalize();
+                
+                Point s_p = lineParametric(ip,light_direction,1);
+                Vector s_l = getVector(s_p, lights[i]->light_pos);
+                s_l.normalize() ;
+                Ray l_r(s_p,s_l) ;
+                
+                /// check touch :(
+        
+                Ray indt(lights[i]->light_pos,light_direction*-1);
+                Vector light_ref = n*(2.0*indt.direction.dot(n)) - indt.direction ;
+                light_ref.normalize();
+                double lambert = l_r.direction.dot(n);
+                double phong = pow((r->direction*-1).dot(light_ref),5);
+                lambert = max(lambert,0.0);
+                phong = max(phong,0.0);
+                *out_color = *out_color + (lambert*0.1 + phong*0.1);
+                
+            }
+            
+            
+         
+        }
+        
+        
+
+        
+        
+        return t;
+     }
+        
 };
 
 
@@ -506,11 +610,10 @@ public:
                Vector s_l = getVector(s_p,lights[i]->light_pos);
                s_l.normalize() ;
                Ray *l_r = new Ray(s_p,s_l) ;
-//               int touch = 0 ;
-//               double distance = s_p.distance(lights[i]->light_pos);
             
-
-          /// touch check
+//             int touch = 0 ;
+//             double distance = s_p.distance(lights[i]->light_pos);
+/// touch check
                    
                Ray indt(lights[i]->light_pos,l_dir*-1);
                Vector light_ref = n*(2.0*indt.direction.dot(n)) - indt.direction ;
@@ -550,7 +653,7 @@ public:
         glEnd();
     }
     
-    double intersect(Ray r,Color *color,int level) {
+    double intersect(Ray *r,Color *color,int level) {
         
         
         return  -1;
@@ -581,7 +684,7 @@ public:
         // nothing to do!
     }
     
-    double intersect(Ray r,Color *color,int level) {
+    double intersect(Ray *r,Color *color,int level) {
         
         
         return  -1;
