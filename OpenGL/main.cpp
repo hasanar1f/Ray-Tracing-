@@ -20,7 +20,7 @@ int drawgrid;
 int drawaxes;
 int red_dot_count;
 double angle,canon_rotation_X,canon_rotation_Y_1,canon_rotation_Y_2,canon_rotation_Z;
-int items,recursionLevel,height,width;
+int items,height,width;
 
 
 double windowHeight=500;
@@ -213,7 +213,7 @@ void Capture() {
 
                 // for each object
 
-                for(int k=0;k<objects.size();k++){
+                for(int k=0;k<objects.size();k++) {
                     double t = objects[k]->intersect(ray,color,0);
                     if(t>0){
                         if(t<min_t){
@@ -222,11 +222,8 @@ void Capture() {
                         }
                     }
                 }
-                if(nearest == -1)
-                {
-                    continue;
-                }
-                else{
+                
+                if(nearest != -1){
                     objects[nearest]->intersect(ray,color,1);
                     image.set_pixel(j,i,color->r*255,color->g*255,color->b*255);
                 }
@@ -278,11 +275,20 @@ void display(){
     ****************************/
     //add objects
     
+    
+    for(int i=0;i<lights.size();i++){
+        glColor3f(lights[i]->color.r,lights[i]->color.g,lights[i]->color.b);
+        glPointSize(3);
+        glBegin(GL_POINTS);
+        glVertex3d(lights[i]->light_pos.x,lights[i]->light_pos.y,lights[i]->light_pos.z);
+        glEnd();
+    }
+    
     for(int i=0;i<objects.size();i++) {
         objects[i]->draw();
     }
     
-    drawAxes();
+    //drawAxes();
     
 
 
