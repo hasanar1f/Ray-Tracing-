@@ -227,6 +227,11 @@ void Capture() {
                     objects[nearest]->intersect(ray,color,1);
                     image.set_pixel(j,i,color->r*255,color->g*255,color->b*255);
                 }
+                
+                // mem clear
+                
+                delete ray;
+                delete color;
             }
         }
     
@@ -234,10 +239,13 @@ void Capture() {
     
     image.save_image("output.bmp");
     printf("Image generated\n");
+    image.clear();
 }
 
 
-
+void Clear() {
+    
+}
 
 
 
@@ -475,7 +483,18 @@ int main(int argc, char **argv){
     glutMainLoop();        //The main loop of OpenGL
     
     cout << endl << "-------------------------------- End -------------------------------------" << endl;
-
+    
+    ////////////// free mem
+    
+    for(int i=0;i<lights.size();i++) {
+        delete lights[i];
+    }
+    lights.clear();
+    
+    for(int i=0;i<objects.size();i++) {
+        delete objects[i];
+    }
+    objects.clear();
 
     return 0;
 }

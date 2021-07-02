@@ -94,10 +94,7 @@ public:
         temp.az = az * d;
         return temp;
     }
-    void print()
-    {
-        cout << ax << " " << ay << " " << az << endl;
-    }
+
 
     double dot(Vector x)
     {
@@ -127,14 +124,7 @@ public:
         this->z = z;
     }
 
-    Point operator+(Point v)
-    {
-        Point temp;
-        temp.x = this->x + v.x;
-        temp.y = this->y + v.y;
-        temp.z = this->z + v.z;
-        return temp;
-    }
+
     
     Point operator+(Vector v)
     {
@@ -155,14 +145,7 @@ public:
         return temp;
     }
 
-    Point operator-(Point v)
-    {
-        Point temp;
-        temp.x = this->x - v.x;
-        temp.y = this->y - v.y;
-        temp.z = this->z - v.z;
-        return temp;
-    }
+
 
     Point &operator=(Point v)
     {
@@ -173,14 +156,7 @@ public:
         return *this;
     }
 
-    double distance(Point a){
-        Point tem = *this - a ;
-        return abs(sqrt(tem.x*tem.x+tem.y*tem.y+tem.z*tem.z)) ;
-    }
 
-    void print(){
-        cout<<"( "<<x<<" , "<<y<<" , "<<z<<" )"<<endl;
-    }
 
 };
 
@@ -231,13 +207,7 @@ public:
            return temp;
        }
 
-   Color operator+(double a){
-       Color temp;
-       temp.r = min(this->r*a,1);
-       temp.g = min(this->g*a,1);
-       temp.b = min(this->b*a,1);
-       return temp;
-   }
+
 
    Color operator*(double a)
    {
@@ -257,14 +227,6 @@ public:
         return temp;
     }
 
-   Color &operator=(Color c)
-   {
-       this->r = c.r;
-       this->g = c.g;
-       this->b = c.b;
-
-       return *this;
-   }
 };
 
 
@@ -367,9 +329,6 @@ public:
     Color color;
     double size;
     
-    Square() {
-        
-    }
 
     Square(Point p,Color c,double s) {
         corner = p;
@@ -394,7 +353,6 @@ public:
     
     double intersect(Ray *r,Color *color,int level) {
         
-        
         return  -1.0;
     }
 };
@@ -406,9 +364,10 @@ public:
     int size;
     bool toggle;
     bool **board;
+    Color **textureMap;
     
     double textureHeight,textureWidth;
-    double tx,ty;
+    int tx,ty;
     bitmap_image texture;
     
     CheckerBoard(int N,int size) {
@@ -433,25 +392,44 @@ public:
         
         // set other parameters
         
-        a = 0.33;
+        a = 0.4;
         d = 0.2;
-        s = 0.3;
+        s = 0.2;
         r = 0.2;
-        shine = 5;
+        shine = 3;
         
         /// texture data load
-        texture = bitmap_image("texture.png");
-        textureWidth = texture.width();
-        textureHeight = texture.height();
+//        texture = bitmap_image("texture.png");
+//        textureWidth = texture.width();
+//        textureHeight = texture.height();
+//
+//        cout << " hi :" << textureHeight << " " << textureWidth << endl;
+//
+//        tx = floor(textureWidth/size);
+//        ty = floor(textureHeight/size);
+//
+//        textureMap = new Color* [size];
+//
+//        for(int i=0;i<size;i++) {
+//            textureMap[i] = new Color();
+//        }
+//
+//        for(int i=0;i<size;i++) {
+//            for(int j=0;j<size;j++) {
+//                unsigned char r,g,b;
+//                texture.get_pixel(i*tx, j*ty, r, g, b);
+//                textureMap[i][j] = Color(r/255.0,g/255.0,b/255.0);
+//            }
+//        }
+//
+
         
-        // map
-        tx = textureWidth / (2*N*size);
-        ty = textureHeight / (2*N*size);
-        
+
     }
     
     ~CheckerBoard() {
         delete [] board;
+        delete [] textureMap;
     }
     
     void draw(){
@@ -526,18 +504,16 @@ public:
         *out_color = *out_color * this->a;
         
         
-        // calculate texture pix
-        int TX, TY;
-        
-        TX = (ip.x + N*size) * tx;
-        TY = (ip.y + N*size) * ty;
-        
-        
-        unsigned char red, green, blue;
-        texture.get_pixel(TX, TY, red, green, blue);
-        Color Txr((double)red,(double)green,(double)blue);
-        
-      //  *out_color = *out_color + Txr;
+//
+//        if(!board[ii][jj]) {
+//            // for black tiles : calculate texture pix
+//            int TX, TY;
+//
+//            TX = (int)(ip.x + N*size) % size;
+//            TY = (int)(ip.y + N*size) %  size;
+//
+//            *out_color = *out_color * textureMap[TX][TY];
+//        }
         
         
         for (int i=0; i<lights.size(); i++) {
@@ -607,6 +583,8 @@ public:
                 *out_color = *out_color + (*reColor * this->r);
                 
             }
+            
+            delete reColor;
         
         }
 
@@ -785,6 +763,8 @@ public:
                 *out_color = *out_color + (*reColor * this->r ) ;
                 
             }
+            
+            delete reColor;
         }
         
         return  t;
@@ -939,6 +919,8 @@ public:
                 *out_color = *out_color + (*reColor * this->r ) ;
                 
             }
+            
+            delete reColor;
         }
         
     
@@ -1127,6 +1109,7 @@ public:
                 *out_color = *out_color + (*reColor * this->r ) ;
                 
             }
+            delete reColor;
         }
         
         return t;
