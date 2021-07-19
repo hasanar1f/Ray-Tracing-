@@ -184,11 +184,7 @@ void Capture() {
     
     double planeDistance = (windowHeight/2.0)*tan( (view_angle*pi)/360.0);
 
-    Vector new_l = Look*planeDistance ;
-    Vector new_r = Right*(-1.0*(windowHeight/2.0)) ;
-    Vector new_u = Up*(windowWidth/2.0) ;
-    
-    Vector resultant = new_l+new_r+new_u ;
+    Vector resultant = Look*planeDistance + Right*(-1.0*(windowHeight/2.0)) + Up*(windowWidth/2.0) ;
     Point topLeft = lineParametric(cam_pos,resultant,1);
 
     double du = windowHeight/image_height ;
@@ -199,9 +195,7 @@ void Capture() {
     for(int i=0;i<image_height;i++){
             for(int j=0;j<image_width;j++){
                 Point point;
-                Vector n_u = Up*(-1.0*i*du);
-                Vector n_r = Right*(j*dv);
-                Vector n_resultant = n_u + n_r ;
+                Vector n_resultant = Up*(-1.0*i*du) + Right*(j*dv);
                 point = lineParametric(topLeft,n_resultant,1);
                 Vector v = getVector(cam_pos,point);
                 v.normalize();
@@ -240,11 +234,6 @@ void Capture() {
     image.save_image("output.bmp");
     printf("Image generated\n");
     image.clear();
-}
-
-
-void Clear() {
-    
 }
 
 
@@ -366,7 +355,7 @@ void loadData() {
     
     
     string object_type;
-    freopen("scene.txt","r",stdin);
+    freopen("eval.txt","r",stdin);
     cin>>recursionLevel >> width >> items ;
     height = width;
     
@@ -498,3 +487,6 @@ int main(int argc, char **argv){
 
     return 0;
 }
+
+
+// done

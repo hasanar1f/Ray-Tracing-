@@ -12,18 +12,8 @@
 #include<stdlib.h>
 #include<math.h>
 #include<algorithm>
-#ifdef __APPLE__
-
 #define GL_SILENCE_DEPRECATION
 #include <GLUT/glut.h>
-
-#else
-
-#include <glut.h>
-#include <windows.h>
-
-#endif
-
 #include "bitmap_image.hpp"
 #define pi (2*acos(0.0))
 #define EPSILON 0.0000001
@@ -41,8 +31,14 @@ class Vector
 {
 public:
     double ax, ay, az;
+    
+    Vector() {
+        ax = 0;
+        ay = 0;
+        az = 0;
+    }
 
-    Vector(double ax=0, double ay=0, double az=0)
+    Vector(double ax, double ay, double az)
     {
         this->ax = ax;
         this->ay = ay;
@@ -123,6 +119,25 @@ public:
         this->y = y;
         this->z = z;
     }
+    
+    Point &operator=(Point v)
+    {
+        this->x = v.x;
+        this->y = v.y;
+        this->z = v.z;
+
+        return *this;
+    }
+
+
+    Point operator-(Vector v)
+    {
+        Point temp;
+        temp.x = this->x - v.ax;
+        temp.y = this->y - v.ay;
+        temp.z = this->z - v.az;
+        return temp;
+    }
 
 
     
@@ -134,33 +149,13 @@ public:
         temp.z = this->z + v.az;
         return temp;
     }
-    
-    
-    Point operator-(Vector v)
-    {
-        Point temp;
-        temp.x = this->x - v.ax;
-        temp.y = this->y - v.ay;
-        temp.z = this->z - v.az;
-        return temp;
-    }
 
-
-
-    Point &operator=(Point v)
-    {
-        this->x = v.x;
-        this->y = v.y;
-        this->z = v.z;
-
-        return *this;
-    }
 
 
 
 };
 
-Vector getVector(Point a,Point b){ //to generate vector AB
+Vector getVector(Point a,Point b){
     Vector temp ;
     temp.ax = b.x - a.x ;
     temp.ay = b.y - a.y ;
@@ -170,12 +165,8 @@ Vector getVector(Point a,Point b){ //to generate vector AB
 }
 
 Point lineParametric(Point p,Vector v,double t){
-    Point new_point ;
-    new_point.x = p.x + v.ax*t ;
-    new_point.y = p.y + v.ay*t ;
-    new_point.z = p.z + v.az*t ;
-
-    return new_point ;
+    Point ret(p.x + v.ax*t, p.y + v.ay*t , p.z + v.az*t) ;
+    return ret ;
 }
  //////////////////////////////
 
@@ -250,11 +241,10 @@ public:
 class Object{
     
 public:
-    enum type {primary, secondary} ;
     Point reference_point;
     Color color;
     double a,d,s,r,shine; // all reflection co-effs and exponent term of specular comp
-    double lenght, width, height;
+    double length, width, height;
     Vector normal;
     
     // constructor
@@ -264,7 +254,7 @@ public:
     }
     
     void setDimension(double l,double w,double h) {
-        this->lenght = l;
+        this->length = l;
         this->width = w;
         this->height = h;
     }
@@ -286,7 +276,7 @@ public:
     
     // pore = 0 kore dibo
     
-    virtual double getParametricValue(Ray *r){
+    virtual double getT(Ray *r){
         
         return 0;
     }
@@ -374,6 +364,7 @@ public:
         
         this->N = N;
         this->size = size;
+    
         
         board = new bool* [2*N+1];
         
@@ -399,11 +390,10 @@ public:
         shine = 3;
         
         /// texture data load
-//        texture = bitmap_image("texture.png");
+//        texture = bitmap_image("text.bmp");
 //        textureWidth = texture.width();
 //        textureHeight = texture.height();
 //
-//        cout << " hi :" << textureHeight << " " << textureWidth << endl;
 //
 //        tx = floor(textureWidth/size);
 //        ty = floor(textureHeight/size);
@@ -417,11 +407,11 @@ public:
 //        for(int i=0;i<size;i++) {
 //            for(int j=0;j<size;j++) {
 //                unsigned char r,g,b;
-//                texture.get_pixel(i*tx, j*ty, r, g, b);
+//                texture.get_pixel(i, j, r, g, b);
 //                textureMap[i][j] = Color(r/255.0,g/255.0,b/255.0);
 //            }
 //        }
-//
+
 
         
 
@@ -452,7 +442,7 @@ public:
         return Vector(0, 0, 1);
     }
     
-    double getParametricValue(Ray *r) {
+    double getT(Ray *r) {
         
         Vector normal = getNormal();
 
@@ -475,21 +465,20 @@ public:
     
     double intersect(Ray *r,Color *out_color,int level) {
         
-        double t = getParametricValue(r);
+        
+        double t = getT(r);
         
         if(t<0) return  -1;
         
-        else if(level==0) return t;
         
         
-        
-        Vector reflection = getReflection(r,normal);
         Point ip = lineParametric(r->start, r->direction, t); // intersection point
+        if( ! checkInside(ip) ) return -1;
         Vector n = getNormal();
         
         // get ii,jj
-        if( ! checkInside(ip) ) return -1;
-
+        
+        if(level==0) return t;
         
             
         // calculate tile position
@@ -499,22 +488,20 @@ public:
         
         // set ambient light
         if( board[ii][jj] ) *out_color = Color(1,1,1);
-        else *out_color = Color(0,0,0);
+        else {
+            // for black tiles : calculate texture pix
+//            int TX, TY;
+//
+//            TX = (int)abs(ip.x)  % size;
+//            TY = (int)abs(ip.y) %  size;
+//
+//            *out_color = textureMap[TX][TY];
+            *out_color = Color(0,0,0);
+        };
 
         *out_color = *out_color * this->a;
         
-        
-//
-//        if(!board[ii][jj]) {
-//            // for black tiles : calculate texture pix
-//            int TX, TY;
-//
-//            TX = (int)(ip.x + N*size) % size;
-//            TY = (int)(ip.y + N*size) %  size;
-//
-//            *out_color = *out_color * textureMap[TX][TY];
-//        }
-        
+    
         
         for (int i=0; i<lights.size(); i++) {
             
@@ -531,8 +518,8 @@ public:
             bool obscured = false;
 
             for(int j=0;j<objects.size();j++){
-                double Ltemp = objects[j]->getParametricValue(ray_temp);
-                if(Ltemp < 0 || Ltemp > ray_length) {
+                double tempLength = objects[j]->getT(ray_temp);
+                if(tempLength < 0 || tempLength > ray_length) {
                     continue;
                 }
                 obscured = true;
@@ -542,50 +529,51 @@ public:
             if(obscured==false){
 
                 Ray indt(lights[i]->light_pos,direction*-1);
-                Vector light_ref = n * (2.0*indt.direction.dot(n)) - indt.direction ;
-                light_ref.normalize();
+                Vector R = n * (2.0*indt.direction.dot(n)) - indt.direction ;
+                R.normalize();
                 double lambert = ray_temp->direction.dot(n);
-                double phong = pow((r->direction*-1).dot(light_ref),shine);
-                lambert = max(lambert,0.0);
-                phong = max(phong,0.0);
-                *out_color = *out_color + (lights[i]->color)*(lambert*d + phong*s);
+                double phong = pow((r->direction*-1).dot(R),shine);
+                *out_color = *out_color + (lights[i]->color)*(max(lambert,0.0)*d + max(phong,0.0)*s);
             }
             
         }
         
 
+        
+
         if(level < recursionLevel) {
-            
+            Vector reflection = getReflection(r,n);
             Point start = lineParametric(ip, reflection, 1.0);
             Ray *reflectionRay = new Ray(start,reflection);
 
             int nearest = -1;
             double min_t = INT_MAX;
             Color *reColor = new Color();
-            
-            
+
+
 
             // find the nearest intersecting object
             for(int k=0;k<objects.size();k++) {
-                
-                double t = objects[k]->intersect(reflectionRay,reColor,1);
-              
+
+                double t = objects[k]->intersect(reflectionRay,reColor,0);
+
                 if(t < min_t) {
                     nearest = k;
                     min_t = t;
                 }
-                
+
             }
-            
+
             if(nearest != -1)
             {
                 objects[nearest]->intersect(reflectionRay,reColor,level+1);
                 *out_color = *out_color + (*reColor * this->r);
-                
+
             }
-            
+
             delete reColor;
-        
+            delete reflectionRay;
+
         }
 
         
@@ -652,6 +640,12 @@ public:
         
     }
     
+    Vector getNormal(Point ip){
+        Vector ans = getVector(reference_point,ip);
+        ans.normalize();
+        return ans;
+    }
+    
     Vector getReflection(Ray *ray,Vector normal){
         double t=2.0*normal.dot(ray->direction);
         Vector ans =  ray->direction - normal* t;
@@ -659,87 +653,77 @@ public:
         return ans;
     }
     
-    double getParametricValue(Ray *r) {
+    double getT(Ray *r) {
         
-       Vector r0 = getVector(reference_point,r->start);
-       Vector rd = r->direction;
+        // H(p) = P.P - r^2
+       Vector R = getVector(reference_point,r->start);
+       Vector ray_dir = r->direction;
+        
        double a = 1 ;
-       double b = 2*r0.dot(rd);
-       double c = r0.dot(r0)- radius*radius;
-       double d = b*b - (4*a*c) ;
+       double b = 2*R.dot(ray_dir);
+       double c = R.dot(R) - radius*radius;
+       double det = b*b - (4*a*c) ;
 
-       if(d<0){
-           return -1 ;
-       }
+       if(det<0) return -1 ;
 
-       double alpha = (-b + sqrt(d))/2 ;
-       double beta = (-b - sqrt(d))/2 ;
-
-       return min(alpha,beta);
+       return min( (-b + sqrt(det))/2 ,(-b - sqrt(det))/2 );
     }
     
     double intersect(Ray *r,Color *out_color,int level) {
         
         
-        
-        double t = getParametricValue(r);
-        
-        if(t<1) return -1;
+        double t = getT(r);
+
+        if(t<=0) return -1;
+    
         if(level==0) return t;
+
+        Point intersectionPoint = lineParametric(r->start, r->direction, t);
         
-        Point ip = lineParametric(r->start,r->direction,t) ;
-        Vector n = getVector(reference_point,ip);
-        n.normalize() ;
+        Vector normal = getNormal(intersectionPoint);
+    
+    
+        *out_color = this->color * a ;
         
-        Vector reflection = getReflection(r,n);
-        
-        *out_color = this->color * a;
-        
+        Vector reflection = getReflection(r,normal);
+
         for(int i=0;i<lights.size();i++) {
             
-            Vector l_dir = getVector(ip,lights[i]->light_pos);
-            double ray_length = l_dir.dot(l_dir);
-            ray_length = sqrt(ray_length);
-            l_dir.normalize();
-            Point s_p = lineParametric(ip,l_dir,1);
-            Vector s_l = getVector(s_p,lights[i]->light_pos);
-            s_l.normalize() ;
-            Ray *l_r = new Ray(s_p,s_l) ;
+            Vector direction = getVector(lights[i]->light_pos, intersectionPoint);
+            direction.normalize();
             
-            
+            Point start = intersectionPoint + direction*1.0;
+            Ray *rayTemp = new Ray(start,direction);
 
-            // chayaaa
+            double ray_length = direction.dot(direction);
+            ray_length = sqrt(ray_length);
+            
             bool obscured = false;
 
-            for(int j=0;j<objects.size();j++) {
-
-                double Ltemp = objects[j]->getParametricValue(l_r);
-                if(Ltemp < 0 || Ltemp > ray_length) {
+            for(int j=0;j<objects.size();j++){
+                
+                double tempLength = objects[j]->getT(rayTemp);
+                if(tempLength < 0 || tempLength > ray_length) {
                     continue;
                 }
                 obscured = true;
                 break;
-            }
-              
-            if(obscured==false) {
                 
-               Ray indt(lights[i]->light_pos,l_dir*-1);
-               Vector light_ref = n*(2.0*indt.direction.dot(n)) - indt.direction ;
-               light_ref.normalize();
-               double lambert = l_r->direction.dot(n);
-               double phong = pow((r->direction*-1).dot(light_ref),shine) ;
-               lambert = max(lambert,0.0);
-               phong = max(phong,0.0);
-
-               *out_color = *out_color + (lights[i]->color)*(lambert*d + phong*s);
             }
-            
+
+            if(obscured==false){
+                double lambert = normal.dot(rayTemp->direction);
+                double phong =  pow(reflection.dot(r->direction),shine);
+
+                *out_color = *out_color + (lights[i]->color)*(max(lambert,0.0)*d + max(phong,0.0)*s) ;
+                
+            }
             
         }
         
         if(level < recursionLevel) {
 
-            Point start = lineParametric(ip, reflection, 1.0);
+            Point start = lineParametric(intersectionPoint, reflection, 1.0);
             Ray *reflectionRay = new Ray(start,reflection);
 
             int nearest = -1;
@@ -765,6 +749,7 @@ public:
             }
             
             delete reColor;
+            delete reflectionRay;
         }
         
         return  t;
@@ -791,27 +776,16 @@ public:
     }
     
     
-    Vector getNormal(){
-        Vector n =  getVector(A,B).cross(getVector(A,C));
-        n.normalize() ;
-        return n ;
-    }
-    
-    Vector getCross(Point a,Point b,Point c){
-        Vector v1 = getVector(a,b) ;
-        Vector v2 = getVector(a,c) ;
 
-        Vector r = v1.cross(v2) ;
-
-        return r ;
-    }
-    
     Vector getNormal(Vector r) {
 
+       
         Vector n =  getVector(A,B).cross(getVector(A,C));
-        if(n.dot(r)>0) n = n*-1 ;
+            if(n.dot(r)>0) n = n * -1 ;
         n.normalize() ;
+       
         return n ;
+        
         
     }
     
@@ -822,80 +796,97 @@ public:
         return ans;
     }
     
-    double getParametricValue(Ray *ray) {
-        Vector n = getNormal();
-        double d = - ( n.ax * A.x + n.ay * A.y + n.az * A.z ) ;
-        double t = - ((d+n.dot(getVector(Point(0,0,0),ray->start)))/n.dot(ray->direction));
-        Point P = lineParametric(ray->start,ray->direction,t);
+    double getT(Ray *ray) {
+        Vector edge1 = getVector(A, B);
+        Vector edge2 = getVector(A, C);
 
-        Vector i,j,k ;
+        Vector h = ray->direction.cross(edge2);
+        double a = edge1.dot(h);
 
-        i = getCross(A,B,P) ;
-        j = getCross(B,C,P) ;
-        k = getCross(C,A,P) ;
+        if(a > -EPSILON && a < EPSILON) {
+            return -1;
+        }
 
-        if(i.dot(j)>=1 && i.dot(k)>=1) return t ;
+        double f = 1.0 / a;
 
-        return -1 ;
+        Vector s = getVector(A,ray->start);
+
+        double u = f*s.dot(h) ;
+
+        if(u < 0.0 || u > 1.0) {
+            return -1;
+        }
+        Vector q = s.cross(edge1);
+
+        double v = f * ray->direction.dot(q) ;
+
+        if(v < 0.0 || u + v  > 1.0) {
+            return -1;
+        }
+
+        double t = f * edge2.dot(q) ;
+
+        if( t > EPSILON ) { //ray intersection
+            return t;
+        }
+
+        return -1;
     }
     
     double intersect(Ray *r,Color *out_color,int level) {
         
-        double t = getParametricValue(r);
-        
-        
+        double t = getT(r);
+
         if(t<=0) return -1;
-
+    
         if(level==0) return t;
-        
-        *out_color = (this->color) * a ;
-        
-        Point ip = lineParametric(r->start,r->direction,t) ;
-        Vector n = getNormal(r->direction) ;
-        
-        Vector reflection = getReflection(r,n);
-        
-        for(int i=0;i<lights.size();i++){
 
-            Vector l_dir = getVector(ip,lights[i]->light_pos);
-            l_dir.normalize();
-            Point s_p = lineParametric(ip,l_dir,1);
-            Vector s_l = getVector(s_p,lights[i]->light_pos);
-            s_l.normalize() ;
-            Ray *l_r = new Ray(s_p,s_l);
+        Point intersectionPoint = lineParametric(r->start, r->direction, t);
+        
+        Vector normal = getNormal(r->direction);
+    
+    
+        *out_color = this->color * a ;
+        
+        Vector reflection = getReflection(r,normal);
+
+        for(int i=0;i<lights.size();i++) {
             
-            // shadow
-            bool obscured = false;
+            Vector direction = getVector(lights[i]->light_pos, intersectionPoint);
+            direction.normalize();
             
-            double ray_length = l_dir.dot(l_dir);
+            Point start = intersectionPoint + direction*1.0;
+            Ray *rayTemp = new Ray(start,direction);
+
+            double ray_length = direction.dot(direction);
             ray_length = sqrt(ray_length);
             
+            bool obscured = false;
+
             for(int j=0;j<objects.size();j++){
-                double Ltemp = objects[j]->getParametricValue(l_r);
-                if(Ltemp < 0 || Ltemp > ray_length) {
+                
+                double tempLength = objects[j]->getT(rayTemp);
+                if(tempLength < 0 || tempLength > ray_length) {
                     continue;
                 }
                 obscured = true;
                 break;
+                
+            }
+
+            if(obscured==false){
+                double lambert = normal.dot(rayTemp->direction);
+                double phong =  pow(reflection.dot(r->direction),shine);
+
+                *out_color = *out_color + (lights[i]->color)*(max(lambert,0.0)*d + max(phong,0.0)*s) ;
+                
             }
             
-            if(obscured==false){
-                Ray indt(lights[i]->light_pos,l_dir*-1);
-                Vector light_ref = n * (2.0*indt.direction.dot(n)) - indt.direction ;
-                light_ref.normalize();
-                double lambert = l_r->direction.dot(n);
-                double phong = pow((r->direction*-1).dot(light_ref),10) ;
-                lambert = max(lambert,0.0);
-                phong = max(phong,0.0);
-                *out_color = *out_color + (lights[i]->color)*(lambert*d + phong*s) ;
-            }
-         
-
         }
         
         if(level < recursionLevel) {
 
-            Point start = lineParametric(ip, reflection, 1.0);
+            Point start = lineParametric(intersectionPoint, reflection, 1.0);
             Ray *reflectionRay = new Ray(start,reflection);
 
             int nearest = -1;
@@ -921,6 +912,7 @@ public:
             }
             
             delete reColor;
+            delete reflectionRay;
         }
         
     
@@ -963,7 +955,7 @@ public:
         return ans;
     }
     
-    double getParametricValue(Ray* ray) {
+    double getT(Ray* ray) {
 
         double dx=ray->direction.ax, dy=ray->direction.ay, dz=ray->direction.az;
         double sx=ray->start.x, sy=ray->start.y, sz=ray->start.z;
@@ -984,37 +976,44 @@ public:
         double temp=2.0*a;
         double t1 = (- b + sqrt(d)) / temp, t2 = (- b - sqrt(d)) / temp;
 
-        Point intersectionPoint[2];
-        intersectionPoint[0] = lineParametric(ray->start, ray->direction, t1);
-        intersectionPoint[1] = lineParametric(ray->start, ray->direction, t2);
+        // Calculate intersecting_point1  and intersecting_point
+        Point ip1,ip2;
+        ip1 = lineParametric(ray->start, ray->direction, t1);
+        ip2 = lineParametric(ray->start, ray->direction, t2);
 
-        double min_x = reference_point.x, max_x = reference_point.x + lenght;
+        double minX = reference_point.x, maxX = reference_point.x + length;
+        double minY = reference_point.y, maxY = reference_point.y + width;
+        double minZ = reference_point.z, maxZ = reference_point.z + height;
 
-        double min_y = reference_point.y, max_y = reference_point.y + width;
+        bool flag1 = true, flag2 = true;
 
-        double min_z = reference_point.z, max_z = reference_point.z + height;
-
-        bool check[2];
-
-        for(int i=0;i<2;i++)
-        {
-            check[i] = (lenght > 0 && ( intersectionPoint[i].x < min_x || intersectionPoint[i].x > max_x) ||
-                      width > 0 && ( intersectionPoint[i].y < min_y || intersectionPoint[i].y > max_y) ||
-                      height > 0 && ( intersectionPoint[i].z < min_z || intersectionPoint[i].z > max_z));
-        }
-        bool check1 = check[0] && check[1];
-        if (check1) {
-            return -1;
-        } else if (check[1]) {
+        if((length > 0 && ( ip1.x < minX || ip1.x > maxX)) ||
+                    (width > 0 && ( ip1.y < minY || ip1.y > maxY)) ||
+                    (height > 0 && ( ip1.z < minZ || ip1.z > maxZ))) flag1 = false;
+        
+        if ((length > 0 && ( ip2.x < minX || ip2.x > maxX)) ||
+                (width > 0 && ( ip2.y < minY || ip2.y > maxY)) ||
+                (height > 0 && ( ip2.z < minZ || ip2.z > maxZ))) flag2 = false;
+        
+        
+       // If both point within volume return smallest t
+        
+       // If only one then return that
+        
+       // If none return -1
+ 
+        
+        if(flag1 && flag2)
+            return min(t1,t2);
+        
+        else if(flag1)
             return t1;
-        } else if (check[0]) {
+        
+        else if(flag2)
             return t2;
-        } else {
-            if(t1<t2)
-                return t1;
-            else
-                return t2;
-                }
+        
+        else return -1;
+
         
     }
     
@@ -1031,7 +1030,7 @@ public:
     
     double intersect(Ray *r,Color *out_color,int level) {
 
-            double t = getParametricValue(r);
+            double t = getT(r);
 
             if(t<=0) return -1;
         
@@ -1052,7 +1051,6 @@ public:
                 direction.normalize();
                 
                 Point start = intersectionPoint + direction*1.0;
-
                 Ray *rayTemp = new Ray(start,direction);
 
                 double ray_length = direction.dot(direction);
@@ -1062,8 +1060,8 @@ public:
 
                 for(int j=0;j<objects.size();j++){
                     
-                    double Ltemp = objects[j]->getParametricValue(rayTemp);
-                    if(Ltemp < 0 || Ltemp > ray_length) {
+                    double tempLength = objects[j]->getT(rayTemp);
+                    if(tempLength < 0 || tempLength > ray_length) {
                         continue;
                     }
                     obscured = true;
@@ -1075,9 +1073,7 @@ public:
                     double lambert = normal.dot(rayTemp->direction);
                     double phong =  pow(reflection.dot(r->direction),shine);
 
-                    lambert = max(lambert,0.0);
-                    phong = max(phong,0.0);
-                    *out_color = *out_color + (lights[i]->color)*(lambert*d + phong*s) ;
+                    *out_color = *out_color + (lights[i]->color)*(max(lambert,0.0)*d + max(phong,0.0)*s) ;
                     
                 }
                 
@@ -1110,6 +1106,7 @@ public:
                 
             }
             delete reColor;
+            delete reflectionRay;
         }
         
         return t;
@@ -1117,6 +1114,8 @@ public:
     
 };
 
+
+// done
 
 
 
