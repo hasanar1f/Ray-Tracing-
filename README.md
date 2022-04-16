@@ -1,4 +1,4 @@
-# Computer-Graphics-Project-__Ray-Tracing-implementation-
+# Computer Graphics : Ray Tracing
 
 # Screenshots
 1. Close view
